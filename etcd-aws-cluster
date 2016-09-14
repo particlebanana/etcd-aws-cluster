@@ -154,7 +154,7 @@ else
     etcd_initial_cluster=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq .AutoScalingGroups[0].Instances[].InstanceId | xargs) | jq -r '.Reservations[].Instances | map(.InstanceId + "=https://" + .NetworkInterfaces[].PrivateIpAddress + ":2380")[]' | xargs | sed 's/  */,/g')
     echo "etcd_initial_cluster=$etcd_initial_cluster"
 
-    etcd_initial_cluster=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq .AutoScalingGroups[0].Instances[].InstanceId | xargs) | jq -r '.Reservations[].Instances | map(https://" + .NetworkInterfaces[].PrivateIpAddress + ":2380")[]' | xargs | sed 's/  */,/g')
+    etcd_initial_cluster=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq .AutoScalingGroups[0].Instances[].InstanceId | xargs) | jq -r '.Reservations[].Instances | map("https://" + .NetworkInterfaces[].PrivateIpAddress + ":2380")[]' | xargs | sed 's/  */,/g')
     echo "etcd_members=$etcd_initial_members"
 
     if [[ ! $etcd_initial_cluster ]]; then
