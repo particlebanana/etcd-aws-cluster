@@ -2,6 +2,8 @@
 pkg="etcd-aws-cluster"
 version="0.4"
 etcd_peers_file_path="/etc/sysconfig/etcd-peers"
+fleet_peers_file_path="/etc/sysconfig/fleet-peers"
+
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
 if [[ ! $region ]]; then
     echo "$pkg: failed to get region"
@@ -110,6 +112,9 @@ if [[ $etcd_existing_peer_urls && $etcd_existing_peer_names != *"$ec2_instance_i
 
     etcd_initial_cluster=$(curl -s -f "$etcd_good_member_url/v2/members" | jq --raw-output '.[] | map(.name + "=" + .peerURLs[0]) | .[]' | xargs | sed 's/  */,/g')$(echo ",$ec2_instance_id=https://${ec2_instance_ip}:2380")
     echo "etcd_initial_cluster=$etcd_initial_cluster"
+    etcd_initial_members=$(curl -s -f "$etcd_good_member_url/v2/members" | jq --raw-output '.[] | map(.name + "=" + .peerURLs[0]) | .[]' | xargs | sed 's/  */,/g')$(echo ",https://${ec2_instance_ip}:2380")
+    echo "etcd_members=$etcd_initial_members"
+
     if [[ ! $etcd_initial_cluster ]]; then
         echo "$pkg: docker command to get etcd peers failed"
         exit 8
@@ -136,12 +141,20 @@ ETCD_NAME=$ec2_instance_id
 ETCD_INITIAL_CLUSTER="$etcd_initial_cluster"
 EOF
 
+    cat > "$fleet_peers_file_path" <<EOF
+ETCD_INITIAL_MEMBERS="$etcd_initial_members"
+EOF
+
 else
     # create a new cluster
     echo "creating new cluster"
 
     etcd_initial_cluster=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq .AutoScalingGroups[0].Instances[].InstanceId | xargs) | jq -r '.Reservations[].Instances | map(.InstanceId + "=https://" + .NetworkInterfaces[].PrivateIpAddress + ":2380")[]' | xargs | sed 's/  */,/g')
     echo "etcd_initial_cluster=$etcd_initial_cluster"
+
+    etcd_initial_cluster=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq .AutoScalingGroups[0].Instances[].InstanceId | xargs) | jq -r '.Reservations[].Instances | map(https://" + .NetworkInterfaces[].PrivateIpAddress + ":2380")[]' | xargs | sed 's/  */,/g')
+    echo "etcd_members=$etcd_initial_members"
+
     if [[ ! $etcd_initial_cluster ]]; then
         echo "$pkg: unable to get peers from auto scaling group"
         exit 10
@@ -151,6 +164,10 @@ else
 ETCD_INITIAL_CLUSTER_STATE=new
 ETCD_NAME=$ec2_instance_id
 ETCD_INITIAL_CLUSTER="$etcd_initial_cluster"
+EOF
+
+    cat > "$fleet_peers_file_path" <<EOF
+ETCD_INITIAL_MEMBERS="$etcd_initial_members"
 EOF
 fi
 
