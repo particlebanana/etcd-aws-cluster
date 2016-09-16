@@ -142,7 +142,8 @@ ETCD_INITIAL_CLUSTER="$etcd_initial_cluster"
 EOF
 
     cat > "$fleet_peers_file_path" <<EOF
-ETCD_ENDPOINTS="$etcd_initial_members"
+FLEET_ETCD_SERVERS="$etcd_initial_members"
+FLANNELD_ETCD_ENDPOINTS="$etcd_initial_members"
 ETCD_SERVERS="$etcd_initial_members"
 ENDPOINT="$etcd_initial_members"
 EOF
@@ -170,6 +171,7 @@ EOF
 
     cat > "$fleet_peers_file_path" <<EOF
 FLEET_ETCD_SERVERS="$etcd_initial_members"
+FLANNELD_ETCD_ENDPOINTS="$etcd_initial_members"
 ETCD_SERVERS="$etcd_initial_members"
 ENDPOINT="$etcd_initial_members"
 EOF
