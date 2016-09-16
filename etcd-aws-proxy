@@ -6,6 +6,7 @@ pkg="etcd-aws-proxy"
 version="0.4"
 etcd_peers_file_path="/etc/sysconfig/etcd-peers"
 etcd_initial_cluster_file_path="/etc/sysconfig/initial-cluster"
+fleet_peers_file_path="/etc/sysconfig/fleet-peers"
 
 # Get S3 bucket url. Either pass in as S3BUCKET (e.g. s3://my-coreos-cluster-clountinit)
 # or generate one from AWS account name: s3://${account}-coreos-cluster-cloudinit.
@@ -40,4 +41,11 @@ then
   aws --region $region s3 rm $etcd_initial_cluster_file_path $discovery_bucket/etcd/$(basename $etcd_initial_cluster_file_path)
 else
  aws --region $region s3 cp $etcd_initial_cluster_file_path $discovery_bucket/etcd/$(basename $etcd_initial_cluster_file_path)
+fi
+
+if aws --region $region s3 ls $fleet_peers_file_path $discovery_bucket/etcd/$(basename $fleet_peers_file_path) > /dev/null 2>&1 ;
+then
+  aws --region $region s3 rm $fleet_peers_file_path $discovery_bucket/etcd/$(basename $fleet_peers_file_path)
+else
+ aws --region $region s3 cp $fleet_peers_file_path $discovery_bucket/etcd/$(basename $fleet_peers_file_path)
 fi
